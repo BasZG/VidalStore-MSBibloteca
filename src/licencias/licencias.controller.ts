@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -29,6 +30,16 @@ export class LicenciasController {
     @Body() dto: CrearCompraDto,
     @Req() req: any,
   ) {
+    if (
+      dto === null ||
+      typeof dto !== 'object' ||
+      Array.isArray(dto)
+    ) {
+      throw new BadRequestException(
+        'El body debe ser un objeto válido',
+      );
+    }
+
     return this.licenciasService.crear(
       dto.juegoId,
       req.user.sub,
