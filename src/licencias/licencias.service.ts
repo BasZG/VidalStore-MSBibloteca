@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Licencia } from './models/licencia.model.js';
 
@@ -7,9 +11,15 @@ export class LicenciasService {
   private readonly licencias: Licencia[] = [];
 
   crear(juegoId: string, usuarioSub: string): Licencia {
+    const juegoIdNormalizado = juegoId?.trim();
+
+    if (!juegoIdNormalizado) {
+      throw new BadRequestException('juegoId es obligatorio');
+    }
+
     const licencia: Licencia = {
       id: randomUUID(),
-      juegoId,
+      juegoId: juegoIdNormalizado,
       usuarioSub,
       fechaCreacion: new Date().toISOString(),
     };
