@@ -247,4 +247,19 @@ describe('MSBibloteca (e2e)', () => {
       .set('x-test-sub', 'admin')
       .expect(404);
   });
+
+    it('POST compras sin body devuelve 400', async () => {
+    await request(app.getHttpServer())
+      .post('/v1/compras')
+      .set('x-test-sub', 'usuario-a')
+      .expect(400);
+  });
+
+  it('POST compras con arreglo devuelve 400', async () => {
+    await request(app.getHttpServer())
+      .post('/v1/compras')
+      .set('x-test-sub', 'usuario-a')
+      .send([])
+      .expect(400);
+  });
 });

@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { vi } from 'vitest';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
@@ -103,5 +104,50 @@ describe('LicenciasController', () => {
     expect(serviceMock.revocar).toHaveBeenCalledWith(
       'licencia-123',
     );
+  });
+
+      it('debe rechazar body ausente al comprar', () => {
+    expect(() =>
+      controller.crearCompra(
+        undefined as any,
+        {
+          user: {
+            sub: 'usuario-real',
+          },
+        },
+      ),
+    ).toThrow(BadRequestException);
+
+    expect(serviceMock.crear).not.toHaveBeenCalled();
+  });
+
+  it('debe rechazar body null al comprar', () => {
+    expect(() =>
+      controller.crearCompra(
+        null as any,
+        {
+          user: {
+            sub: 'usuario-real',
+          },
+        },
+      ),
+    ).toThrow(BadRequestException);
+
+    expect(serviceMock.crear).not.toHaveBeenCalled();
+  });
+
+  it('debe rechazar un arreglo como body al comprar', () => {
+    expect(() =>
+      controller.crearCompra(
+        [] as any,
+        {
+          user: {
+            sub: 'usuario-real',
+          },
+        },
+      ),
+    ).toThrow(BadRequestException);
+
+    expect(serviceMock.crear).not.toHaveBeenCalled();
   });
 });
