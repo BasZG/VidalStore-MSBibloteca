@@ -1,34 +1,75 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import {
+  ExtractJwt,
+  Strategy,
+} from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(
+  Strategy,
+) {
   private readonly clientId: string;
 
   constructor(configService: ConfigService) {
-    const region = configService.get<string>('COGNITO_REGION');
-    const userPoolId = configService.get<string>('COGNITO_USER_POOL_ID');
-    const clientId = configService.get<string>('COGNITO_CLIENT_ID');
+    const clientId =
+      configService.get<string>('COGNITO_CLIENT_ID');
 
-    if (!region || !userPoolId || !clientId) {
-      throw new Error('Faltan variables de configuración de Cognito');
+    if (!clientId) {
+      throw new Error(
+        'Falta COGNITO_CLIENT_ID',
+      );
     }
 
-    const issuer =
-      `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
+    const issuerConfigurado =
+      configService.get<string>('COGNITO_ISSUER');
+
+    let issuer: string;
+
+    if (issuerConfigurado) {
+      issuer = issuerConfigurado;
+    } else {
+      const region =
+        configService.get<string>('COGNITO_REGION');
+
+      const userPoolId =
+        configService.get<string>(
+          'COGNITO_USER_POOL_ID',
+        );
+
+      if (!region || !userPoolId) {
+        throw new Error(
+          'Faltan variables de configuración de Cognito',
+        );
+      }
+
+      issuer =
+        `https://cognito-idp.${region}` +
+        `.amazonaws.com/${userPoolId}`;
+    }
+
+    const jwksUri =
+      configService.get<string>(
+        'COGNITO_JWKS_URI',
+      ) ??
+      `${issuer}/.well-known/jwks.json`;
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest:
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+
       ignoreExpiration: false,
 
       secretOrKeyProvider: passportJwtSecret({
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: `${issuer}/.well-known/jwks.json`,
+        jwksUri,
       }),
 
       issuer,
