@@ -20,6 +20,13 @@ describe('MSBibloteca (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    /*
+ * Estos guards se reemplazan para aislar las pruebas
+ * funcionales de licencias y biblioteca.
+ *
+ * La autenticacion JWT y autorizacion reales se prueban
+ * en security.e2e-spec.ts.
+ */
     const jwtGuardPrueba = {
       canActivate(context: ExecutionContext) {
         const req =
