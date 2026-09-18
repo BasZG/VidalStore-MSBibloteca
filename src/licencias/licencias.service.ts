@@ -1,15 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { Licencia } from './models/licencia.model.js';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { randomUUID } from "node:crypto";
+import { Licencia } from "./models/licencia.model.js";
 
 @Injectable()
 export class LicenciasService {
   private readonly licencias: Licencia[] = [];
 
   crear(juegoId: string, usuarioSub: string): Licencia {
+    if (typeof juegoId !== "string") {
+      throw new BadRequestException("juegoId debe ser string");
+    }
+
+    const juegoIdNormalizado = juegoId.trim();
+
+    if (!juegoIdNormalizado) {
+      throw new BadRequestException("juegoId es obligatorio");
+    }
+
     const licencia: Licencia = {
       id: randomUUID(),
-      juegoId,
+      juegoId: juegoIdNormalizado,
       usuarioSub,
       fechaCreacion: new Date().toISOString(),
     };
@@ -35,7 +49,7 @@ export class LicenciasService {
     );
 
     if (indice === -1) {
-      throw new NotFoundException('Licencia no encontrada');
+      throw new NotFoundException("Licencia no encontrada");
     }
 
     const [licenciaRevocada] = this.licencias.splice(indice, 1);
