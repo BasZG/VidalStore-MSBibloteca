@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -145,5 +146,113 @@ describe('LicenciasService', () => {
     expect(() =>
       service.revocar(licencia.id),
     ).toThrow(NotFoundException);
+  });
+  it('debe rechazar una segunda licencia activa del mismo juego para el mismo usuario', () => {
+  service.crear(
+    'juego-duplicado',
+    'usuario-a',
+  );
+
+  expect(() =>
+    service.crear(
+      'juego-duplicado',
+      'usuario-a',
+    ),
+  ).toThrow(ConflictException);
+
+  expect(
+    service.obtenerTodas(),
+  ).toHaveLength(1);
+});
+
+it('debe responder LICENCIA_YA_EXISTE ante una compra duplicada', () => {
+  service.crear(
+    'juego-duplicado',
+    'usuario-a',
+  );
+
+  try {
+    service.crear(
+      'juego-duplicado',
+      'usuario-a',
+    );
+
+    throw new Error(
+      'La compra duplicada debio fallar',
+    );
+  } catch (error) {
+    expect(error).toBeInstanceOf(
+      ConflictException,
+    );
+
+    const conflicto =
+      error as ConflictException;
+
+    expect(
+      conflicto.getStatus(),
+    ).toBe(409);
+
+    expect(
+      conflicto.getResponse(),
+    ).toEqual({
+      message: 'LICENCIA_YA_EXISTE',
+      error: 'Conflict',
+      statusCode: 409,
+    });
+  }
+});
+
+it('debe detectar duplicado despues de normalizar juegoId', () => {
+  service.crear(
+    'juego-normalizado',
+    'usuario-a',
+  );
+
+  expect(() =>
+    service.crear(
+      '  juego-normalizado  ',
+      'usuario-a',
+    ),
+  ).toThrow(ConflictException);
+
+  expect(
+    service.obtenerTodas(),
+  ).toHaveLength(1);
+});
+
+it('debe permitir comprar nuevamente despues de revocar la licencia', () => {
+  const primeraLicencia =
+    service.crear(
+      'juego-recompra',
+      'usuario-a',
+    );
+
+  service.revocar(
+    primeraLicencia.id,
+  );
+
+  const segundaLicencia =
+    service.crear(
+      'juego-recompra',
+      'usuario-a',
+    );
+
+  expect(
+    segundaLicencia.juegoId,
+  ).toBe('juego-recompra');
+
+  expect(
+    segundaLicencia.usuarioSub,
+  ).toBe('usuario-a');
+
+  expect(
+    segundaLicencia.id,
+  ).not.toBe(
+    primeraLicencia.id,
+  );
+
+  expect(
+    service.obtenerTodas(),
+  ).toHaveLength(1);
   });
 });

@@ -269,4 +269,100 @@ describe('MSBibloteca (e2e)', () => {
       .send([])
       .expect(400);
   });
+  it('aplica compra unica por usuario y permite recomprar despues de revocar', async () => {
+  const juegoId =
+    'juego-contrato-compra-unica';
+
+  const compraA = await request(
+    app.getHttpServer(),
+  )
+    .post('/v1/compras')
+    .set(
+      'x-test-sub',
+      'usuario-contrato-a',
+    )
+    .send({
+      juegoId,
+    })
+    .expect(201);
+
+  const duplicadaA = await request(
+    app.getHttpServer(),
+  )
+    .post('/v1/compras')
+    .set(
+      'x-test-sub',
+      'usuario-contrato-a',
+    )
+    .send({
+      juegoId,
+    })
+    .expect(409);
+
+  expect(
+    duplicadaA.body.message,
+  ).toBe(
+    'LICENCIA_YA_EXISTE',
+  );
+
+  const compraB = await request(
+    app.getHttpServer(),
+  )
+    .post('/v1/compras')
+    .set(
+      'x-test-sub',
+      'usuario-contrato-b',
+    )
+    .send({
+      juegoId,
+    })
+    .expect(201);
+
+  expect(
+    compraB.body.usuarioSub,
+  ).toBe(
+    'usuario-contrato-b',
+  );
+
+  await request(
+    app.getHttpServer(),
+  )
+    .delete(
+      `/v1/licencias/${compraA.body.id}`,
+    )
+    .set(
+      'x-test-sub',
+      'admin',
+    )
+    .expect(200);
+
+  const recompraA = await request(
+    app.getHttpServer(),
+  )
+    .post('/v1/compras')
+    .set(
+      'x-test-sub',
+      'usuario-contrato-a',
+    )
+    .send({
+      juegoId,
+    })
+    .expect(201);
+
+  expect(
+    recompraA.body.usuarioSub,
+  ).toBe(
+    'usuario-contrato-a',
+  );
+
+  expect(
+    recompraA.body.juegoId,
+  ).toBe(juegoId);
+
+  expect(
+    recompraA.body.id,
+  ).not.toBe(
+    compraA.body.id,
+  );
+  });
 });

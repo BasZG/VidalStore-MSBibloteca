@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -19,6 +20,18 @@ export class LicenciasService {
 
     if (!juegoIdNormalizado) {
       throw new BadRequestException("juegoId es obligatorio");
+    }
+
+    const licenciaExistente = this.licencias.some(
+      (licencia) =>
+        licencia.usuarioSub === usuarioSub &&
+        licencia.juegoId === juegoIdNormalizado,
+    );
+
+    if (licenciaExistente) {
+      throw new ConflictException(
+        "LICENCIA_YA_EXISTE",
+      );
     }
 
     const licencia: Licencia = {
@@ -52,7 +65,10 @@ export class LicenciasService {
       throw new NotFoundException("Licencia no encontrada");
     }
 
-    const [licenciaRevocada] = this.licencias.splice(indice, 1);
+    const [licenciaRevocada] = this.licencias.splice(
+      indice,
+      1,
+    );
 
     return licenciaRevocada;
   }
