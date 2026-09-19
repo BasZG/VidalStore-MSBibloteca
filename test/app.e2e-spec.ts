@@ -1,16 +1,7 @@
-import {
-  ExecutionContext,
-  type INestApplication,
-} from '@nestjs/common';
+import { ExecutionContext, type INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { JwtAuthGuard } from './../src/auth/jwt-auth.guard.js';
 import { RolesGuard } from './../src/auth/roles.guard.js';
 import { ScopesGuard } from './../src/auth/scopes.guard.js';
@@ -21,24 +12,20 @@ describe('MSBibloteca (e2e)', () => {
 
   beforeAll(async () => {
     /*
- * Estos guards se reemplazan para aislar las pruebas
- * funcionales de licencias y biblioteca.
- *
- * La autenticacion JWT y autorizacion reales se prueban
- * en security.e2e-spec.ts.
- */
+     * Estos guards se reemplazan para aislar las pruebas
+     * funcionales de licencias y biblioteca.
+     *
+     * La autenticacion JWT y autorizacion reales se prueban
+     * en security.e2e-spec.ts.
+     */
     const jwtGuardPrueba = {
       canActivate(context: ExecutionContext) {
-        const req =
-          context.switchToHttp().getRequest();
+        const req = context.switchToHttp().getRequest();
 
         const sub = req.headers['x-test-sub'];
 
         req.user = {
-          sub:
-            typeof sub === 'string'
-              ? sub
-              : 'usuario-prueba',
+          sub: typeof sub === 'string' ? sub : 'usuario-prueba',
         };
 
         return true;
@@ -49,17 +36,16 @@ describe('MSBibloteca (e2e)', () => {
       canActivate: () => true,
     };
 
-    const moduleFixture: TestingModule =
-      await Test.createTestingModule({
-        imports: [AppModule],
-      })
-        .overrideGuard(JwtAuthGuard)
-        .useValue(jwtGuardPrueba)
-        .overrideGuard(ScopesGuard)
-        .useValue(guardPermitido)
-        .overrideGuard(RolesGuard)
-        .useValue(guardPermitido)
-        .compile();
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue(jwtGuardPrueba)
+      .overrideGuard(ScopesGuard)
+      .useValue(guardPermitido)
+      .overrideGuard(RolesGuard)
+      .useValue(guardPermitido)
+      .compile();
 
     app = moduleFixture.createNestApplication();
 
@@ -71,9 +57,7 @@ describe('MSBibloteca (e2e)', () => {
   });
 
   it('compra valida devuelve 201 y usa req.user.sub', async () => {
-    const response = await request(
-      app.getHttpServer(),
-    )
+    const response = await request(app.getHttpServer())
       .post('/v1/compras?usuarioSub=intruso-query')
       .set('x-test-sub', 'usuario-a')
       .send({
@@ -83,15 +67,11 @@ describe('MSBibloteca (e2e)', () => {
       .expect(201);
 
     expect(response.body.juegoId).toBe('juego-1');
-    expect(response.body.usuarioSub).toBe(
-      'usuario-a',
-    );
+    expect(response.body.usuarioSub).toBe('usuario-a');
   });
 
   it('entrada invalida devuelve 400 y no crea licencia', async () => {
-    const antes = await request(
-      app.getHttpServer(),
-    )
+    const antes = await request(app.getHttpServer())
       .get('/v1/licencias')
       .set('x-test-sub', 'admin')
       .expect(200);
@@ -104,16 +84,12 @@ describe('MSBibloteca (e2e)', () => {
       })
       .expect(400);
 
-    const despues = await request(
-      app.getHttpServer(),
-    )
+    const despues = await request(app.getHttpServer())
       .get('/v1/licencias')
       .set('x-test-sub', 'admin')
       .expect(200);
 
-    expect(despues.body.length).toBe(
-      antes.body.length,
-    );
+    expect(despues.body.length).toBe(antes.body.length);
   });
 
   it('juegoId no string devuelve 400', async () => {
@@ -127,9 +103,7 @@ describe('MSBibloteca (e2e)', () => {
   });
 
   it('usuario A ve su licencia y usuario B no', async () => {
-    const compra = await request(
-      app.getHttpServer(),
-    )
+    const compra = await request(app.getHttpServer())
       .post('/v1/compras')
       .set('x-test-sub', 'usuario-a')
       .send({
@@ -137,39 +111,31 @@ describe('MSBibloteca (e2e)', () => {
       })
       .expect(201);
 
-    const bibliotecaA = await request(
-      app.getHttpServer(),
-    )
+    const bibliotecaA = await request(app.getHttpServer())
       .get('/v1/biblioteca')
       .set('x-test-sub', 'usuario-a')
       .expect(200);
 
-    const bibliotecaB = await request(
-      app.getHttpServer(),
-    )
+    const bibliotecaB = await request(app.getHttpServer())
       .get('/v1/biblioteca')
       .set('x-test-sub', 'usuario-b')
       .expect(200);
 
     expect(
       bibliotecaA.body.some(
-        (licencia: { id: string }) =>
-          licencia.id === compra.body.id,
+        (licencia: { id: string }) => licencia.id === compra.body.id,
       ),
     ).toBe(true);
 
     expect(
       bibliotecaB.body.some(
-        (licencia: { id: string }) =>
-          licencia.id === compra.body.id,
+        (licencia: { id: string }) => licencia.id === compra.body.id,
       ),
     ).toBe(false);
   });
 
   it('A y B pueden tener licencias del mismo juego', async () => {
-    const compraA = await request(
-      app.getHttpServer(),
-    )
+    const compraA = await request(app.getHttpServer())
       .post('/v1/compras')
       .set('x-test-sub', 'usuario-a')
       .send({
@@ -177,9 +143,7 @@ describe('MSBibloteca (e2e)', () => {
       })
       .expect(201);
 
-    const compraB = await request(
-      app.getHttpServer(),
-    )
+    const compraB = await request(app.getHttpServer())
       .post('/v1/compras')
       .set('x-test-sub', 'usuario-b')
       .send({
@@ -187,31 +151,19 @@ describe('MSBibloteca (e2e)', () => {
       })
       .expect(201);
 
-    expect(compraA.body.juegoId).toBe(
-      'juego-compartido',
-    );
+    expect(compraA.body.juegoId).toBe('juego-compartido');
 
-    expect(compraB.body.juegoId).toBe(
-      'juego-compartido',
-    );
+    expect(compraB.body.juegoId).toBe('juego-compartido');
 
-    expect(compraA.body.usuarioSub).toBe(
-      'usuario-a',
-    );
+    expect(compraA.body.usuarioSub).toBe('usuario-a');
 
-    expect(compraB.body.usuarioSub).toBe(
-      'usuario-b',
-    );
+    expect(compraB.body.usuarioSub).toBe('usuario-b');
 
-    expect(compraA.body.id).not.toBe(
-      compraB.body.id,
-    );
+    expect(compraA.body.id).not.toBe(compraB.body.id);
   });
 
   it('administracion puede listar todas las licencias', async () => {
-    const response = await request(
-      app.getHttpServer(),
-    )
+    const response = await request(app.getHttpServer())
       .get('/v1/licencias')
       .set('x-test-sub', 'admin')
       .expect(200);
@@ -234,9 +186,7 @@ describe('MSBibloteca (e2e)', () => {
   });
 
   it('revocacion devuelve 200 y repetida 404', async () => {
-    const compra = await request(
-      app.getHttpServer(),
-    )
+    const compra = await request(app.getHttpServer())
       .post('/v1/compras')
       .set('x-test-sub', 'usuario-a')
       .send({
@@ -255,7 +205,7 @@ describe('MSBibloteca (e2e)', () => {
       .expect(404);
   });
 
-    it('POST compras sin body devuelve 400', async () => {
+  it('POST compras sin body devuelve 400', async () => {
     await request(app.getHttpServer())
       .post('/v1/compras')
       .set('x-test-sub', 'usuario-a')
@@ -270,99 +220,53 @@ describe('MSBibloteca (e2e)', () => {
       .expect(400);
   });
   it('aplica compra unica por usuario y permite recomprar despues de revocar', async () => {
-  const juegoId =
-    'juego-contrato-compra-unica';
+    const juegoId = 'juego-contrato-compra-unica';
 
-  const compraA = await request(
-    app.getHttpServer(),
-  )
-    .post('/v1/compras')
-    .set(
-      'x-test-sub',
-      'usuario-contrato-a',
-    )
-    .send({
-      juegoId,
-    })
-    .expect(201);
+    const compraA = await request(app.getHttpServer())
+      .post('/v1/compras')
+      .set('x-test-sub', 'usuario-contrato-a')
+      .send({
+        juegoId,
+      })
+      .expect(201);
 
-  const duplicadaA = await request(
-    app.getHttpServer(),
-  )
-    .post('/v1/compras')
-    .set(
-      'x-test-sub',
-      'usuario-contrato-a',
-    )
-    .send({
-      juegoId,
-    })
-    .expect(409);
+    const duplicadaA = await request(app.getHttpServer())
+      .post('/v1/compras')
+      .set('x-test-sub', 'usuario-contrato-a')
+      .send({
+        juegoId,
+      })
+      .expect(409);
 
-  expect(
-    duplicadaA.body.message,
-  ).toBe(
-    'LICENCIA_YA_EXISTE',
-  );
+    expect(duplicadaA.body.message).toBe('LICENCIA_YA_EXISTE');
 
-  const compraB = await request(
-    app.getHttpServer(),
-  )
-    .post('/v1/compras')
-    .set(
-      'x-test-sub',
-      'usuario-contrato-b',
-    )
-    .send({
-      juegoId,
-    })
-    .expect(201);
+    const compraB = await request(app.getHttpServer())
+      .post('/v1/compras')
+      .set('x-test-sub', 'usuario-contrato-b')
+      .send({
+        juegoId,
+      })
+      .expect(201);
 
-  expect(
-    compraB.body.usuarioSub,
-  ).toBe(
-    'usuario-contrato-b',
-  );
+    expect(compraB.body.usuarioSub).toBe('usuario-contrato-b');
 
-  await request(
-    app.getHttpServer(),
-  )
-    .delete(
-      `/v1/licencias/${compraA.body.id}`,
-    )
-    .set(
-      'x-test-sub',
-      'admin',
-    )
-    .expect(200);
+    await request(app.getHttpServer())
+      .delete(`/v1/licencias/${compraA.body.id}`)
+      .set('x-test-sub', 'admin')
+      .expect(200);
 
-  const recompraA = await request(
-    app.getHttpServer(),
-  )
-    .post('/v1/compras')
-    .set(
-      'x-test-sub',
-      'usuario-contrato-a',
-    )
-    .send({
-      juegoId,
-    })
-    .expect(201);
+    const recompraA = await request(app.getHttpServer())
+      .post('/v1/compras')
+      .set('x-test-sub', 'usuario-contrato-a')
+      .send({
+        juegoId,
+      })
+      .expect(201);
 
-  expect(
-    recompraA.body.usuarioSub,
-  ).toBe(
-    'usuario-contrato-a',
-  );
+    expect(recompraA.body.usuarioSub).toBe('usuario-contrato-a');
 
-  expect(
-    recompraA.body.juegoId,
-  ).toBe(juegoId);
+    expect(recompraA.body.juegoId).toBe(juegoId);
 
-  expect(
-    recompraA.body.id,
-  ).not.toBe(
-    compraA.body.id,
-  );
+    expect(recompraA.body.id).not.toBe(compraA.body.id);
   });
 });
