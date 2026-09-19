@@ -666,6 +666,218 @@ describe(
     );
 
     it(
+      'acepta JWT sin grupos en biblioteca propia',
+      async () => {
+        const token =
+          firmarToken({
+            sub:
+              'usuario-sin-grupos-biblioteca',
+            'cognito:groups':
+              undefined,
+          });
+
+        const response =
+          await request(
+            app.getHttpServer(),
+          )
+            .get('/v1/biblioteca')
+            .set(
+              'Authorization',
+              `Bearer ${token}`,
+            )
+            .expect(200);
+
+        expect(
+          Array.isArray(response.body),
+        ).toBe(true);
+      },
+    );
+
+    it(
+      'rechaza JWT sin grupos en listado administrativo',
+      async () => {
+        const token = firmarToken({
+          'cognito:groups': undefined,
+        });
+
+        await request(
+          app.getHttpServer(),
+        )
+          .get('/v1/licencias')
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(403);
+      },
+    );
+
+    it(
+      'JWT sin grupos no puede revocar su licencia',
+      async () => {
+        const token = firmarToken({
+          sub:
+            'usuario-sin-grupos-revocacion',
+          'cognito:groups': undefined,
+        });
+
+        const compra =
+          await request(
+            app.getHttpServer(),
+          )
+            .post('/v1/compras')
+            .set(
+              'Authorization',
+              `Bearer ${token}`,
+            )
+            .send({
+              juegoId:
+                'juego-sin-grupos-revocacion',
+            })
+            .expect(201);
+
+        await request(
+          app.getHttpServer(),
+        )
+          .delete(
+            `/v1/licencias/${compra.body.id}`,
+          )
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(403);
+
+        const biblioteca =
+          await request(
+            app.getHttpServer(),
+          )
+            .get('/v1/biblioteca')
+            .set(
+              'Authorization',
+              `Bearer ${token}`,
+            )
+            .expect(200);
+
+        expect(
+          biblioteca.body.some(
+            (licencia: {
+              id: string;
+            }) =>
+              licencia.id ===
+              compra.body.id,
+          ),
+        ).toBe(true);
+      },
+    );
+
+    it(
+      'trata grupos vacios como jugador',
+      async () => {
+        const token = firmarToken({
+          'cognito:groups': [],
+        });
+
+        await request(
+          app.getHttpServer(),
+        )
+          .get('/v1/licencias')
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(403);
+      },
+    );
+
+    it(
+      'conserva administrador y descarta grupo desconocido',
+      async () => {
+        const token = firmarToken({
+          'cognito:groups': [
+            'administradores',
+            'grupo-externo',
+          ],
+        });
+
+        await request(
+          app.getHttpServer(),
+        )
+          .get('/v1/licencias')
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(200);
+      },
+    );
+
+    it(
+      'rechaza grupos exclusivamente desconocidos',
+      async () => {
+        const token = firmarToken({
+          'cognito:groups': [
+            'grupo-externo',
+          ],
+        });
+
+        await request(
+          app.getHttpServer(),
+        )
+          .get('/v1/licencias')
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(403);
+      },
+    );
+
+    it(
+      'rechaza claim de grupos con formato incorrecto',
+      async () => {
+        const token = firmarToken({
+          'cognito:groups':
+            'administradores',
+        });
+
+        await request(
+          app.getHttpServer(),
+        )
+          .get('/v1/licencias')
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(403);
+      },
+    );
+
+    it(
+      'ignora grupos efectivos inyectados en el JWT',
+      async () => {
+        const token = firmarToken({
+          'cognito:groups': [
+            'jugadores',
+          ],
+          gruposEfectivos: [
+            'administradores',
+          ],
+        });
+
+        await request(
+          app.getHttpServer(),
+        )
+          .get('/v1/licencias')
+          .set(
+            'Authorization',
+            `Bearer ${token}`,
+          )
+          .expect(403);
+      },
+    );
+
+    it(
       'rechaza editor en listado administrativo',
       async () => {
         const token =
