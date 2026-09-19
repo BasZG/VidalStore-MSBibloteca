@@ -9,6 +9,7 @@ import {
   Strategy,
 } from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
+import { obtenerGruposEfectivos } from './grupos-efectivos.js';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(
@@ -92,6 +93,11 @@ export class JwtStrategy extends PassportStrategy(
       );
     }
 
-    return payload;
+    return {
+      ...payload,
+      gruposEfectivos: obtenerGruposEfectivos(
+        payload['cognito:groups'],
+      ),
+    };
   }
 }
