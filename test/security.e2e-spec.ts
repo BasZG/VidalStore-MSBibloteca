@@ -377,26 +377,24 @@ describe(
     );
 
     it(
-      'rechaza ID Token',
-      async () => {
-        const token =
-          firmarToken({
-            token_use: 'id',
-            client_id: undefined,
-            aud: CLIENT_ID,
-          });
+  'rechaza token exclusivamente por token_use id',
+  async () => {
+    const token =
+      firmarToken({
+        token_use: 'id',
+      });
 
-        await request(
-          app.getHttpServer(),
-        )
-          .get('/v1/biblioteca')
-          .set(
-            'Authorization',
-            `Bearer ${token}`,
-          )
-          .expect(401);
-      },
-    );
+    await request(
+      app.getHttpServer(),
+    )
+      .get('/v1/biblioteca')
+      .set(
+        'Authorization',
+        `Bearer ${token}`,
+      )
+      .expect(401);
+  },
+);
 
     it(
       'rechaza token de otro App Client',
@@ -1145,5 +1143,116 @@ describe(
         ).toBe(false);
       },
     );
+    it(
+  'POST compras sin autenticacion responde 401 y no crea licencia',
+  async () => {
+    const adminToken =
+      firmarToken({
+        sub: 'admin-regresion-post-401',
+        'cognito:groups': [
+          'administradores',
+        ],
+      });
+
+    const juegoId =
+      'juego-no-creado-por-401';
+
+    await request(
+      app.getHttpServer(),
+    )
+      .post('/v1/compras')
+      .send({
+        juegoId,
+      })
+      .expect(401);
+
+    const licencias =
+      await request(
+        app.getHttpServer(),
+      )
+        .get('/v1/licencias')
+        .set(
+          'Authorization',
+          `Bearer ${adminToken}`,
+        )
+        .expect(200);
+
+    expect(
+      licencias.body.some(
+        (
+          licencia: {
+            juegoId: string;
+          },
+        ) =>
+          licencia.juegoId ===
+          juegoId,
+      ),
+    ).toBe(false);
+  },
+);
+it(
+  'DELETE licencia sin autenticacion responde 401 y no revoca licencia',
+  async () => {
+    const compradorToken =
+      firmarToken({
+        sub:
+          'usuario-regresion-delete-401',
+      });
+
+    const compra =
+      await request(
+        app.getHttpServer(),
+      )
+        .post('/v1/compras')
+        .set(
+          'Authorization',
+          `Bearer ${compradorToken}`,
+        )
+        .send({
+          juegoId:
+            'juego-no-revocado-por-401',
+        })
+        .expect(201);
+
+    await request(
+      app.getHttpServer(),
+    )
+      .delete(
+        `/v1/licencias/${compra.body.id}`,
+      )
+      .expect(401);
+
+    const adminToken =
+      firmarToken({
+        sub: 'admin-regresion-delete-401',
+        'cognito:groups': [
+          'administradores',
+        ],
+      });
+
+    const licencias =
+      await request(
+        app.getHttpServer(),
+      )
+        .get('/v1/licencias')
+        .set(
+          'Authorization',
+          `Bearer ${adminToken}`,
+        )
+        .expect(200);
+
+    expect(
+      licencias.body.some(
+        (
+          licencia: {
+            id: string;
+          },
+        ) =>
+          licencia.id ===
+          compra.body.id,
+      ),
+    ).toBe(true);
+  },
+);
   },
 );
